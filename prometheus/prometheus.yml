@@ -26,3 +26,13 @@ scrape_configs:
         labels:
           service: 'sentro-hardware'
           env: 'production'
+
+  # 4. Sentro ML Anomaly Detector Service
+  - job_name: 'ml-detector'
+    metrics_path: '/metrics'
+    scrape_interval: 5s
+    static_configs:
+      - targets: ['ml-detector:8000']
+        labels:
+          service: 'sentro-aiops'
+          env: 'production'

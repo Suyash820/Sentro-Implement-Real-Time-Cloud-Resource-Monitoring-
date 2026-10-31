@@ -70,6 +70,14 @@ resource "aws_security_group" "sentro_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+  # ML Anomaly Detector API
+  ingress {
+    from_port   = 8000
+    to_port     = 8000
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
   # Outbound traffic (allow all)
   egress {
     from_port   = 0

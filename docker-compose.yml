@@ -79,6 +79,25 @@ services:
     depends_on:
       - prometheus
 
+  # 5. Intelligent ML Anomaly Detector Service
+  ml-detector:
+    build:
+      context: .
+      dockerfile: ml/Dockerfile
+    image: sentro-ml-detector:latest
+    container_name: sentro-ml-detector
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - PROMETHEUS_URL=http://prometheus:9090
+      - MODEL_DIR=ml/models
+      - POLL_INTERVAL=10
+    networks:
+      - sentro-network
+    depends_on:
+      - prometheus
+
 networks:
   sentro-network:
     driver: bridge

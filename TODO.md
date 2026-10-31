@@ -1,81 +1,105 @@
-# 📋 Sentro — Module 2 Implementation Plan (TODO.md)
-
-> **Module 2 Objective:** Implement the centralized **Real-Time Observability Stack** by instrumenting the application, collecting metrics via **Prometheus**, and visualizing system & application performance on interactive **Grafana** dashboards.
+# 📋 Sentro — Project Roadmap & Task Checklist (TODO.md)
 
 ---
 
-## 🛠️ Step-by-Step Task Checklist
-
-### Phase 1: Application Instrumentation (Flask Metrics)
-- [x] **1.1 Add Prometheus Library to Dependencies**
-  - File: `src/requirements.txt`
-  - Add `prometheus-flask-exporter==0.23.1`
-- [x] **1.2 Instrument Flask Application (`src/app.py`)**
-  - Integrate `PrometheusMetrics(app)` to expose default HTTP metrics:
-    - Request counts by endpoint and HTTP status (`2xx`, `4xx`, `5xx`)
-    - Request latency histograms
-  - Expose the `/metrics` endpoint on port `5000`
-- [x] **1.3 Add Unit Test for Metrics Endpoint**
-  - File: `tests/test_app.py`
-  - Add `test_metrics_endpoint()` verifying `200 OK` and presence of metric headers
+## ✅ Module 1: Infrastructure & App Deployment (Completed)
+- [x] Python Flask simulated cloud workload (`src/app.py`)
+- [x] Automated unit test suite (`tests/test_app.py`)
+- [x] Dockerfile containerization
+- [x] Terraform AWS EC2 infrastructure & security groups
+- [x] Node Exporter hardware metrics exposition (`:9100`)
+- [x] GitHub Actions automated CI/CD pipeline
 
 ---
 
-### Phase 2: Prometheus Setup & Scraping Configuration
-- [x] **2.1 Create Prometheus Configuration (`prometheus/prometheus.yml`)**
-  - Configure global scrape interval (e.g., `10s`)
-  - Configure scrape jobs:
-    - `flask-app`: Scrapes `app:5000/metrics`
-    - `node-exporter`: Scrapes `node-exporter:9100/metrics`
-    - `prometheus`: Self-monitoring on `localhost:9090`
+## ✅ Module 2: Centralized Observability Stack (Completed)
+- [x] Application-level metric instrumentation via `prometheus-flask-exporter`
+- [x] Prometheus server configuration & automated scrape targets (`prometheus/prometheus.yml`)
+- [x] Automated Grafana provisioning (Datasource & Sentro Overview Dashboard)
+- [x] Unified Docker Compose orchestration (`docker-compose.yml`)
+- [x] Terraform Security Group updates (Ports `9090` and `3000`)
+- [x] Continuous deployment pipeline updates
 
 ---
 
-### Phase 3: Grafana Automated Provisioning & Dashboards
-- [x] **3.1 Automate Prometheus Data Source Provisioning**
-  - File: `grafana/provisioning/datasources/prometheus_datasource.yml`
-  - Auto-configure Prometheus (`http://prometheus:9090`) as the default data source upon boot
-- [x] **3.2 Automate Dashboard Provider**
-  - File: `grafana/provisioning/dashboards/dashboard_provider.yml`
-  - Tell Grafana to automatically load dashboard JSON files from `grafana/dashboards/`
-- [x] **3.3 Create Sentro Overview Dashboard (`grafana/dashboards/sentro-overview.json`)**
-  - **CPU Utilization Panel**: Gauge + Time-series graph showing `% CPU used`
-  - **Memory Utilization Panel**: Used RAM vs. Free RAM
-  - **Network Throughput Panel**: Transmit & Receive rates (MB/s)
-  - **Application Traffic Panel**: Total HTTP Requests/sec grouped by status code
-  - **Application Latency Panel**: P95 & P99 response time in milliseconds
+## 🚀 Module 3: Intelligent Anomaly Detection (Isolation Forest)
+
+> **Module 3 Objective:** Implement an unsupervised Machine Learning service using the **Isolation Forest** algorithm that continuously ingests Prometheus metrics, detects anomalous resource consumption (CPU spikes, memory leaks, traffic floods), and visualizes anomaly scores in Grafana.
 
 ---
 
-### Phase 4: Multi-Container Orchestration (`docker-compose.yml`)
-- [x] **4.1 Create Unified `docker-compose.yml`**
-  - Service 1: `app` (Flask API on port `5000`)
-  - Service 2: `node-exporter` (Hardware telemetry on port `9100`)
-  - Service 3: `prometheus` (`prom/prometheus:v2.48.0` on port `9090`)
-  - Service 4: `grafana` (`grafana/grafana:10.2.0` on port `3000`)
-  - Unified Docker bridge network `sentro-network` ensuring instant DNS resolution between containers
+### Phase 1: Metric Ingestion Pipeline & Dependencies
+- [x] **1.1 Set up ML Dependencies**
+  - File: `ml/requirements.txt`
+  - Add: `scikit-learn>=1.3.0`, `pandas>=2.1.0`, `numpy>=1.24.0`, `requests>=2.31.0`, `prometheus-client>=0.19.0`, `joblib>=1.3.0`
+- [x] **1.2 Build Prometheus Telemetry Ingestion Client**
+  - File: `ml/collector.py`
+  - Query Prometheus HTTP API (`/api/v1/query_range` and `/api/v1/query`):
+    - CPU utilization %
+    - Memory utilization %
+    - Network I/O rate (Rx/Tx bytes/sec)
+    - App request throughput & P95 latency
+  - Format metrics into structured Pandas DataFrames with timestamp indexing
 
 ---
 
-### Phase 5: Infrastructure as Code (Terraform Updates)
-- [x] **5.1 Update Security Group (`terraform/main.tf`)**
-  - Ingress port `9090` (Prometheus Web UI)
-  - Ingress port `3000` (Grafana Dashboard)
-- [x] **5.2 Update Outputs (`terraform/outputs.tf`)**
-  - Add output `prometheus_url` (`http://<EC2_PUBLIC_IP>:9090`)
-  - Add output `grafana_url` (`http://<EC2_PUBLIC_IP>:3000`)
+### Phase 2: Isolation Forest Model Architecture & Training
+- [x] **2.1 Build ML Model Class (`ml/model.py`)**
+  - Preprocessing pipeline with `StandardScaler` to normalize multi-dimensional metrics
+  - Initialize `sklearn.ensemble.IsolationForest`:
+    - `n_estimators=100`, `contamination=0.05` (5% expected anomalies), `random_state=42`
+  - Training method: Fit model on normal baseline cloud telemetry
+  - Inference method:
+    - Output binary label: `+1` (Normal) vs. `-1` (Anomaly)
+    - Output continuous anomaly score: Normalized from `0.00` (safe) to `1.00` (critical anomaly)
+  - Model persistence: Save/load trained weights via `joblib`
+- [x] **2.2 Baseline Dataset Generator & Model Training Script**
+  - File: `ml/train.py`
+  - Generate baseline normal workload data and train initial model artifact (`ml/models/isolation_forest.joblib`)
 
 ---
 
-### Phase 6: CI/CD Pipeline Updates
-- [x] **6.1 Update GitHub Actions Workflow (`.github/workflows/deploy.yml`)**
-  - Update deployment job to copy docker compose configs and execute `docker compose up -d`
-- [x] **6.2 Commit Baseline Updates**
-  - Commit untracked documentation files and `t3.micro` instance type adjustment
+### Phase 3: Real-Time ML Anomaly Detection Service
+- [x] **3.1 Build Continuous Daemon Service (`ml/detector_service.py`)**
+  - Runs in a continuous loop (polls Prometheus every 10–15 seconds)
+  - Fetches the latest metric window, runs inference via the Isolation Forest model
+  - Exposes detected anomaly metrics on port `8000/metrics`:
+    - `sentro_anomaly_detected` (Gauge: `0` for Normal, `1` for Anomaly)
+    - `sentro_anomaly_score` (Gauge: `0.00` to `1.00`)
+    - `sentro_predictions_total` (Counter: total evaluated samples)
+- [x] **3.2 Update Prometheus Configuration**
+  - File: `prometheus/prometheus.yml`
+  - Add `ml-detector` scrape target (`ml-detector:8000/metrics`)
 
 ---
 
-## 🎯 Verification & Deliverables Upon Completion
-1. **Flask Metrics Test**: `curl http://localhost:5000/metrics` returns live Prometheus metrics.
-2. **Prometheus Targets Status**: `http://<IP>:9090/targets` shows all endpoints in state `UP` (Green).
-3. **Grafana Real-time View**: `http://<IP>:3000` opens immediately with pre-loaded Sentro dashboards.
+### Phase 4: Chaos & Stress Testing Simulator
+- [x] **4.1 Build Interactive Workload / Chaos Simulator**
+  - File: `scripts/simulate_chaos.py`
+  - Command-line tool to trigger artificial anomalies on demand:
+    - `--cpu-spike`: Multi-core CPU intensive computation loop
+    - `--memory-leak`: Progressive RAM allocation to simulate uncollected memory
+    - `--traffic-burst`: Concurrent HTTP flood against the Flask workload (`/`)
+    - `--normal`: Emulates baseline healthy user traffic
+
+---
+
+### Phase 5: Grafana Anomaly Visualizations
+- [x] **5.1 Update Sentro Overview Dashboard (`grafana/dashboards/sentro-overview.json`)**
+  - Add **Anomaly Status Panel**:
+    - Displays bold status: `🟢 NORMAL WORKLOAD` or `🔴 ANOMALY DETECTED`
+  - Add **Isolation Forest Anomaly Score Timeline**:
+    - Plotted anomaly score (0.0 – 1.0) with red threshold line at `0.70`
+    - Correlated directly alongside CPU/RAM spikes for visual root-cause analysis
+
+---
+
+### Phase 6: Docker Integration & Automated Testing
+- [x] **6.1 Containerize ML Service**
+  - File: `ml/Dockerfile`
+  - Builds lightweight Python image running `detector_service.py`
+- [x] **6.2 Update `docker-compose.yml`**
+  - Add `ml-detector` service on port `8000:8000` attached to `sentro-network`
+- [x] **6.3 Automated Unit Tests for ML Pipeline**
+  - File: `tests/` (`test_collector.py`, `test_model.py`, `test_service.py`, `test_chaos.py`)
+  - Unit tests for metric collector, model training, anomaly prediction, and chaos testing (15 passed)

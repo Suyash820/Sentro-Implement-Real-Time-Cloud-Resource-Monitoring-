@@ -22,3 +22,8 @@ output "grafana_url" {
   description = "URL of the Grafana dashboard"
   value       = "http://${aws_instance.sentro_server.public_ip}:3000"
 }
+
+output "ml_detector_url" {
+  description = "URL of the ML Anomaly Detection Service"
+  value       = "http://${aws_instance.sentro_server.public_ip}:8000"
+}
