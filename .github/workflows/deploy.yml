@@ -74,6 +74,8 @@ jobs:
           script: |
             cd /home/ubuntu/sentro
             export DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}
+            sudo systemctl stop node_exporter || true
+            sudo systemctl disable node_exporter || true
             sudo -E docker compose pull
             sudo -E docker compose down || true
-            sudo -E docker compose up -d --remove-orphans
+            sudo -E docker compose up -d --build --remove-orphans
