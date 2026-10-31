@@ -74,6 +74,12 @@ services:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=admin
       - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SMTP_ENABLED=${ALERT_EMAIL_ENABLED:-false}
+      - GF_SMTP_HOST=${SMTP_SERVER:-smtp.gmail.com}:${SMTP_PORT:-587}
+      - GF_SMTP_USER=${ALERT_EMAIL_SENDER:-}
+      - GF_SMTP_PASSWORD=${ALERT_EMAIL_PASSWORD:-}
+      - GF_SMTP_FROM_ADDRESS=${ALERT_EMAIL_SENDER:-}
+      - GF_SMTP_FROM_NAME=Sentro AIOps Alerts
     networks:
       - sentro-network
     depends_on:
