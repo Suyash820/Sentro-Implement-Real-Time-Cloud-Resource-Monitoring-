@@ -90,7 +90,7 @@ services:
     build:
       context: .
       dockerfile: ml/Dockerfile
-    image: sentro-ml-detector:latest
+    image: ${DOCKER_USERNAME:-sentro}/sentro-ml-detector:latest
     container_name: sentro-ml-detector
     restart: unless-stopped
     ports:

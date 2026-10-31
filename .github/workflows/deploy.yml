@@ -42,12 +42,20 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build and push Docker image
+      - name: Build and push App Docker image
         uses: docker/build-push-action@v4
         with:
           context: .
           push: true
           tags: ${{ secrets.DOCKER_USERNAME }}/sentro-app:latest
+
+      - name: Build and push ML Detector Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ml/Dockerfile
+          push: true
+          tags: ${{ secrets.DOCKER_USERNAME }}/sentro-ml-detector:latest
 
   deploy:
     needs: publish
@@ -78,4 +86,4 @@ jobs:
             sudo systemctl disable node_exporter || true
             sudo -E docker compose pull
             sudo -E docker compose down || true
-            sudo -E docker compose up -d --build --remove-orphans
+            sudo -E docker compose up -d --remove-orphans
