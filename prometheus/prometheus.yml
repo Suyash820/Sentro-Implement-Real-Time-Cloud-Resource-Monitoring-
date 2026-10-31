@@ -1,0 +1,28 @@
+global:
+  scrape_interval: 10s
+  evaluation_interval: 10s
+
+scrape_configs:
+  # 1. Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # 2. Sentro Flask Application Workload
+  - job_name: 'flask-app'
+    metrics_path: '/metrics'
+    scrape_interval: 5s
+    static_configs:
+      - targets: ['app:5000']
+        labels:
+          service: 'sentro-workload'
+          env: 'production'
+
+  # 3. Host / Node Exporter Hardware Metrics
+  - job_name: 'node-exporter'
+    scrape_interval: 5s
+    static_configs:
+      - targets: ['node-exporter:9100']
+        labels:
+          service: 'sentro-hardware'
+          env: 'production'

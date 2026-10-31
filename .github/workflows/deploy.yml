@@ -52,14 +52,27 @@ jobs:
     needs: publish
     runs-on: ubuntu-latest
     steps:
-      - name: Deploy to EC2
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Copy Compose & Monitoring Configs to EC2
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          source: "docker-compose.yml,prometheus/,grafana/"
+          target: "/home/ubuntu/sentro"
+
+      - name: Deploy Stack via Docker Compose
         uses: appleboy/ssh-action@v0.1.10
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            sudo docker pull ${{ secrets.DOCKER_USERNAME }}/sentro-app:latest
-            sudo docker stop sentro-app || true
-            sudo docker rm sentro-app || true
-            sudo docker run -d --name sentro-app -p 5000:5000 ${{ secrets.DOCKER_USERNAME }}/sentro-app:latest
+            cd /home/ubuntu/sentro
+            export DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}
+            sudo -E docker compose pull
+            sudo -E docker compose down || true
+            sudo -E docker compose up -d --remove-orphans

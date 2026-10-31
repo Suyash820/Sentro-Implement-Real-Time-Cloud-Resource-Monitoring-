@@ -20,3 +20,8 @@ def test_health(client):
     rv = client.get('/health')
     assert rv.status_code == 200
     assert b'healthy' in rv.data
+
+def test_metrics(client):
+    rv = client.get('/metrics')
+    assert rv.status_code == 200
+    assert b'sentro_app_info' in rv.data or b'flask_http_request' in rv.data

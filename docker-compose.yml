@@ -1,0 +1,88 @@
+version: '3.8'
+
+services:
+  # 1. Sentro Flask Workload API
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ${DOCKER_USERNAME:-sentro}/sentro-app:latest
+    container_name: sentro-app
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    networks:
+      - sentro-network
+    environment:
+      - FLASK_ENV=production
+
+  # 2. Hardware / Host Telemetry Collector
+  node-exporter:
+    image: quay.io/prometheus/node-exporter:v1.7.0
+    container_name: sentro-node-exporter
+    restart: unless-stopped
+    pid: host
+    ports:
+      - "9100:9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--path.rootfs=/rootfs'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    networks:
+      - sentro-network
+
+  # 3. Prometheus Time-Series Database & Scraper
+  prometheus:
+    image: prom/prometheus:v2.48.0
+    container_name: sentro-prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    networks:
+      - sentro-network
+    depends_on:
+      - app
+      - node-exporter
+
+  # 4. Grafana Visual Dashboard Portal
+  grafana:
+    image: grafana/grafana:10.2.0
+    container_name: sentro-grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./grafana/dashboards:/etc/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    networks:
+      - sentro-network
+    depends_on:
+      - prometheus
+
+networks:
+  sentro-network:
+    driver: bridge
+
+volumes:
+  prometheus-data:
+  grafana-data:

@@ -12,3 +12,13 @@ output "app_url" {
   description = "URL of the deployed application"
   value       = "http://${aws_instance.sentro_server.public_ip}:5000"
 }
+
+output "prometheus_url" {
+  description = "URL of the Prometheus monitoring server"
+  value       = "http://${aws_instance.sentro_server.public_ip}:9090"
+}
+
+output "grafana_url" {
+  description = "URL of the Grafana dashboard"
+  value       = "http://${aws_instance.sentro_server.public_ip}:3000"
+}
