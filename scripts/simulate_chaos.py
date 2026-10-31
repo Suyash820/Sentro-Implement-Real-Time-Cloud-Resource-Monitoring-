@@ -115,6 +115,39 @@ def flood_traffic(target_url: str = "http://localhost:5000", duration_sec: int =
 
     print(f"\n[+] Traffic Surge ended. Total requests sent: {stats['success'] + stats['errors']}.")
 
+def stress_disk(duration_sec: int = 30):
+    """
+    Generates continuous heavy sequential disk write and read I/O operations.
+    """
+    import tempfile
+    import os
+    print(f"[*] Starting Disk I/O stress testing for {duration_sec}s...")
+    start_time = time.time()
+    chunk = b"X" * (1024 * 1024)  # 1 MB
+    temp_files = []
+    try:
+        while time.time() - start_time < duration_sec:
+            tf = tempfile.NamedTemporaryFile(delete=False)
+            for _ in range(20):  # Write 20 MB per file
+                tf.write(chunk)
+            tf.flush()
+            os.fsync(tf.fileno())
+            tf.close()
+            temp_files.append(tf.name)
+            # Read back
+            with open(tf.name, "rb") as f:
+                _ = f.read()
+            if len(temp_files) > 3:
+                old = temp_files.pop(0)
+                if os.path.exists(old):
+                    os.remove(old)
+            time.sleep(0.05)
+    finally:
+        for fpath in temp_files:
+            if os.path.exists(fpath):
+                os.remove(fpath)
+        print("\n[+] Disk I/O stress finished and temporary scratch files cleaned.")
+
 def normal_workload(target_url: str = "http://localhost:5000", duration_sec: int = 30):
     """
     Generates realistic, calm baseline user browsing traffic.
@@ -139,9 +172,10 @@ def main():
     )
     parser.add_argument("--cpu-spike", action="store_true", help="Trigger a multi-threaded CPU spike")
     parser.add_argument("--memory-leak", action="store_true", help="Simulate progressive RAM leak")
+    parser.add_argument("--disk-stress", action="store_true", help="Trigger heavy Disk I/O reads & writes")
     parser.add_argument("--traffic-burst", action="store_true", help="Flood the web app with concurrent traffic")
     parser.add_argument("--normal", action="store_true", help="Simulate normal, healthy background traffic")
-    parser.add_argument("--all", action="store_true", help="Trigger combined CPU, Memory, and Traffic anomaly")
+    parser.add_argument("--all", action="store_true", help="Trigger combined CPU, Memory, Disk, and Traffic anomaly")
     parser.add_argument("--duration", type=int, default=30, help="Duration of stress test in seconds (default: 30)")
     parser.add_argument("--url", type=str, default="http://localhost:5000", help="Target Flask URL (default: http://localhost:5000)")
     parser.add_argument("--target-mb", type=int, default=300, help="Target MB to allocate for memory leak (default: 300)")
@@ -149,7 +183,7 @@ def main():
     args = parser.parse_args()
 
     # Default action if no flags provided: show help or run CPU spike
-    if not any([args.cpu_spike, args.memory_leak, args.traffic_burst, args.normal, args.all]):
+    if not any([args.cpu_spike, args.memory_leak, args.disk_stress, args.traffic_burst, args.normal, args.all]):
         print("[-] No stress scenario specified. Use --help to see all options.")
         print("[*] Defaulting to a short 15s CPU spike demonstration...")
         burn_cpu(duration_sec=15)
@@ -167,6 +201,9 @@ def main():
 
     if args.memory_leak or args.all:
         leak_memory(duration_sec=args.duration, target_mb=args.target_mb)
+
+    if args.disk_stress or args.all:
+        stress_disk(duration_sec=args.duration)
 
     if args.traffic_burst or args.all:
         flood_traffic(target_url=args.url, duration_sec=args.duration)

@@ -91,14 +91,27 @@ Model Decision:    {prediction.get('status', 'ANOMALY')}
 Timestamp:         {time.strftime('%Y-%m-%d %H:%M:%S UTC', time.gmtime())}
 
 ------------------------------------------------------------
-Telemetric Breakdown at Trigger:
+Telemetric Breakdown at Trigger (12 Cloud Vectors):
 ------------------------------------------------------------
+[Compute]
 • CPU Utilization:     {metrics.get('cpu_usage', 'N/A')}%
+• System Load (1m):    {metrics.get('system_load', 'N/A')}
+
+[Memory & Storage]
 • Memory Utilization:  {metrics.get('memory_usage', 'N/A')}%
+• Disk Utilization:    {metrics.get('disk_usage', 'N/A')}%
+• Disk Read Rate:      {metrics.get('disk_read_rate', 'N/A')} Bps
+• Disk Write Rate:     {metrics.get('disk_write_rate', 'N/A')} Bps
+
+[Network]
 • Network Inbound:     {metrics.get('network_in_rate', 'N/A')} Bps
 • Network Outbound:    {metrics.get('network_out_rate', 'N/A')} Bps
+• Active TCP Sockets:  {metrics.get('tcp_connections', 'N/A')}
+
+[Application Workload]
 • App Request Rate:    {metrics.get('app_request_rate', 'N/A')} req/s
 • App P95 Latency:     {metrics.get('app_p95_latency', 'N/A')} s
+• App Error Rate:      {metrics.get('app_error_rate', 'N/A')} err/s
 
 Model Algorithm: Isolation Forest (100 Estimators)
 ============================================================
@@ -125,9 +138,12 @@ Timestamp:         {time.strftime('%Y-%m-%d %H:%M:%S UTC', time.gmtime())}
 Current Stabilized Telemetry:
 ------------------------------------------------------------
 • CPU Utilization:     {metrics.get('cpu_usage', 'N/A')}%
+• System Load (1m):    {metrics.get('system_load', 'N/A')}
 • Memory Utilization:  {metrics.get('memory_usage', 'N/A')}%
+• Disk Utilization:    {metrics.get('disk_usage', 'N/A')}%
 • App Request Rate:    {metrics.get('app_request_rate', 'N/A')} req/s
 • App P95 Latency:     {metrics.get('app_p95_latency', 'N/A')} s
+• App Error Rate:      {metrics.get('app_error_rate', 'N/A')} err/s
 
 The workload metrics have returned to safe operational baselines.
 ============================================================

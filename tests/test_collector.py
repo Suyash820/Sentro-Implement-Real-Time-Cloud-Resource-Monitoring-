@@ -50,6 +50,7 @@ def test_get_latest_metrics_snapshot(mock_get):
     snapshot = collector.get_latest_metrics_snapshot()
 
     assert isinstance(snapshot, dict)
+    assert len(snapshot) == 12
     for key in METRIC_QUERIES.keys():
         assert key in snapshot
         assert isinstance(snapshot[key], (int, float))

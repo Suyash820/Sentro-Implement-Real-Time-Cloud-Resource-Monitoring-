@@ -7,23 +7,40 @@ from typing import Dict, Optional, Any
 
 logger = logging.getLogger(__name__)
 
-# Standard PromQL queries for Sentro Cloud Telemetry
+# Standard PromQL queries for Sentro Cloud Telemetry (12 Comprehensive Parameters)
 METRIC_QUERIES = {
+    # 1. Compute Tier
     "cpu_usage": '100 - (avg(rate(node_cpu_seconds_total{mode="idle"}[1m])) * 100)',
+    "system_load": 'node_load1',
+    # 2. Memory Tier
     "memory_usage": '(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100',
+    # 3. Storage & Disk Tier
+    "disk_usage": '100 - ((node_filesystem_avail_bytes{mountpoint="/"}/node_filesystem_size_bytes{mountpoint="/"}) * 100)',
+    "disk_read_rate": 'sum(rate(node_disk_read_bytes_total[1m]))',
+    "disk_write_rate": 'sum(rate(node_disk_written_bytes_total[1m]))',
+    # 4. Network Tier
     "network_in_rate": 'sum(rate(node_network_receive_bytes_total{device!~"lo|docker.*|veth.*"}[1m]))',
     "network_out_rate": 'sum(rate(node_network_transmit_bytes_total{device!~"lo|docker.*|veth.*"}[1m]))',
+    "tcp_connections": 'node_sockstat_TCP_inuse',
+    # 5. Application Workload Tier (Golden Signals)
     "app_request_rate": 'sum(rate(flask_http_request_total[1m]))',
-    "app_p95_latency": 'histogram_quantile(0.95, sum by (le) (rate(flask_http_request_duration_seconds_bucket[1m])))'
+    "app_p95_latency": 'histogram_quantile(0.95, sum by (le) (rate(flask_http_request_duration_seconds_bucket[1m])))',
+    "app_error_rate": 'sum(rate(flask_http_request_total{status=~"[45].."}[1m]))'
 }
 
 DEFAULT_METRIC_VALUES = {
     "cpu_usage": 5.0,
+    "system_load": 0.5,
     "memory_usage": 20.0,
+    "disk_usage": 40.0,
+    "disk_read_rate": 1024.0,
+    "disk_write_rate": 2048.0,
     "network_in_rate": 1024.0,
     "network_out_rate": 512.0,
+    "tcp_connections": 15.0,
     "app_request_rate": 0.0,
-    "app_p95_latency": 0.005
+    "app_p95_latency": 0.005,
+    "app_error_rate": 0.0
 }
 
 class MetricCollector:

@@ -14,14 +14,7 @@ def test_anomaly_detector_training_and_prediction():
 
     # Generate synthetic training data
     np.random.seed(42)
-    data = {
-        "cpu_usage": np.random.normal(20, 5, 200),
-        "memory_usage": np.random.normal(30, 5, 200),
-        "network_in_rate": np.random.normal(2000, 500, 200),
-        "network_out_rate": np.random.normal(1000, 250, 200),
-        "app_request_rate": np.random.normal(5, 1, 200),
-        "app_p95_latency": np.random.normal(0.02, 0.005, 200),
-    }
+    data = {f: np.random.normal(10, 2, 200) for f in FEATURE_NAMES}
     df = pd.DataFrame(data)
 
     res = detector.train(df)
@@ -30,14 +23,7 @@ def test_anomaly_detector_training_and_prediction():
     assert res["samples"] == 200
 
     # Normal sample
-    normal_metrics = {
-        "cpu_usage": 21.0,
-        "memory_usage": 31.0,
-        "network_in_rate": 2050.0,
-        "network_out_rate": 1020.0,
-        "app_request_rate": 5.1,
-        "app_p95_latency": 0.021
-    }
+    normal_metrics = {f: 10.0 for f in FEATURE_NAMES}
     pred_normal = detector.predict(normal_metrics)
     assert pred_normal["is_anomaly"] is False
     assert pred_normal["label"] == 1
@@ -45,14 +31,7 @@ def test_anomaly_detector_training_and_prediction():
     assert 0.0 <= pred_normal["anomaly_score"] <= 1.0
 
     # Extreme anomalous sample
-    anomalous_metrics = {
-        "cpu_usage": 99.0,
-        "memory_usage": 98.0,
-        "network_in_rate": 500000.0,
-        "network_out_rate": 250000.0,
-        "app_request_rate": 500.0,
-        "app_p95_latency": 5.0
-    }
+    anomalous_metrics = {f: 50000.0 for f in FEATURE_NAMES}
     pred_anom = detector.predict(anomalous_metrics)
     assert pred_anom["is_anomaly"] is True
     assert pred_anom["label"] == -1
@@ -63,7 +42,7 @@ def test_anomaly_detector_save_and_load(tmp_path):
     model_dir = str(tmp_path / "models")
     detector = AnomalyDetector(n_estimators=30, random_state=42)
 
-    X = np.random.normal(10, 2, (100, 6))
+    X = np.random.normal(10, 2, (100, len(FEATURE_NAMES)))
     detector.train(X)
     detector.save(model_dir)
 
@@ -72,6 +51,6 @@ def test_anomaly_detector_save_and_load(tmp_path):
     assert loaded_detector.is_trained
 
     # Predict with loaded model
-    sample = {"cpu_usage": 10.0, "memory_usage": 10.0, "network_in_rate": 10.0, "network_out_rate": 10.0, "app_request_rate": 10.0, "app_p95_latency": 10.0}
+    sample = {f: 10.0 for f in FEATURE_NAMES}
     pred = loaded_detector.predict(sample)
     assert "is_anomaly" in pred

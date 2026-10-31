@@ -8,11 +8,17 @@ from sklearn.preprocessing import StandardScaler
 
 FEATURE_NAMES = [
     "cpu_usage",
+    "system_load",
     "memory_usage",
+    "disk_usage",
+    "disk_read_rate",
+    "disk_write_rate",
     "network_in_rate",
     "network_out_rate",
+    "tcp_connections",
     "app_request_rate",
-    "app_p95_latency"
+    "app_p95_latency",
+    "app_error_rate"
 ]
 
 class AnomalyDetector:
