@@ -11,6 +11,9 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+# Keys and Secrets
+*.pem
+*.key
 
 # Terraform
 .terraform/
