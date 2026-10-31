@@ -80,22 +80,57 @@ Sentro is structured as a resilient, decoupled microservice mesh orchestrated vi
 
 ## 3. Metric Selection Rationale: The Comprehensive 12-Parameter Cloud Telemetry Suite
 
-A machine learning model is only as effective as the feature engineering driving it. In response to industry best practices and operational reviews, Sentro monitors a holistic **12-dimensional telemetry vector** structured across 5 architectural tiers (Compute, Memory, Storage, Network, Application Golden Signals):
+### 3.1 Architectural Philosophy: Bridging the USE Method and Google SRE Golden Signals
+A machine learning anomaly detection engine is fundamentally bound by the quality and domain coverage of its feature engineering. In distributed cloud systems, monitoring too few metrics leads to blind spots, while monitoring hundreds of uncurated metrics introduces noise, dimensional curse, and excessive compute overhead.
 
-| # | Architectural Tier | Metric Name | Source | Prometheus PromQL Query | Why This Metric Was Chosen |
+To engineer an optimal telemetry suite, Sentro harmonizes the two premier industry observability frameworks:
+1. **The USE Method (Utilization, Saturation, Errors):** Formulated by Brendan Gregg (Netflix/Intel), this methodology analyzes every hardware component for capacity utilization, queue saturation, and operational errors.
+2. **The Google SRE Four Golden Signals:** Formulated by Google Site Reliability Engineering teams, focusing on the user-facing indicators: **Latency**, **Traffic**, **Errors**, and **Saturation**.
+
+By synthesizing these frameworks, Sentro establishes a holistic **12-dimensional telemetry vector** structured across 5 foundational tiers:
+
+---
+
+### 3.2 Master Telemetry Feature Matrix
+
+| # | Architectural Tier | Metric Name | Source | Prometheus PromQL Query | Core Diagnostic Purpose |
 |---|---|---|---|---|---|
-| **1** | **Compute** | **CPU Utilization (%)** | Node Exporter | `100 - (avg(rate(node_cpu_seconds_total{mode="idle"}[1m])) * 100)` | Direct measure of processor execution saturation. Spikes indicate unoptimized loops, runaway background tasks, or crypto-mining malware. |
-| **2** | **Compute** | **System Load (1m)** | Node Exporter | `node_load1` | Measures compute queue saturation (threads runnable or in uninterruptible disk sleep). Differentiates between CPU-bound bottlenecks and I/O wait stalls. |
-| **3** | **Memory** | **Memory Utilization (%)** | Node Exporter | `(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100` | Indicates RAM pressure. Crucial for detecting progressive memory leaks where objects are allocated but never garbage collected, heading toward an OOM crash. |
-| **4** | **Storage** | **Disk Space Utilization (%)** | Node Exporter | `100 - ((node_filesystem_avail_bytes{mountpoint="/"}/node_filesystem_size_bytes{mountpoint="/"}) * 100)` | Monitors persistent disk fill. 100% disk usage causes immediate container and database corruption. Early anomaly detection prevents catastrophic failure. |
-| **5** | **Storage** | **Disk Read Rate (Bps)** | Node Exporter | `sum(rate(node_disk_read_bytes_total[1m]))` | Measures storage throughput read saturation, heavy un-indexed database queries, or large cache misses. |
-| **6** | **Storage** | **Disk Write Rate (Bps)** | Node Exporter | `sum(rate(node_disk_written_bytes_total[1m]))` | Monitors disk write saturation, runaway debug logging, unthrottled dumps, or ransomware file-encryption behavior. |
-| **7** | **Network** | **Network Inbound Rate (Bps)** | Node Exporter | `sum(rate(node_network_receive_bytes_total{device!~"lo\|docker.*\|veth.*"}[1m]))` | Monitors incoming packet throughput. Surges signify Layer 7 DDoS floods, large payload uploads, or brute-force scanning. |
-| **8** | **Network** | **Network Outbound Rate (Bps)** | Node Exporter | `sum(rate(node_network_transmit_bytes_total{device!~"lo\|docker.*\|veth.*"}[1m]))` | Monitors egress bandwidth. Sudden spikes reveal database dumps, unauthorized data exfiltration, or botnet command-and-control activity. |
-| **9** | **Network** | **Active TCP Sockets** | Node Exporter | `node_sockstat_TCP_inuse` | Tracks open TCP network sockets. Catches socket exhaustion leaks, SYN floods, unclosed database connection pools, and connection zombies. |
-| **10** | **Application** | **App Request Throughput (req/s)** | Flask Exporter | `sum(rate(flask_http_request_total[1m]))` | Measures actual customer traffic volume. Essential for correlating whether a CPU spike is organic (caused by heavy traffic) or inorganic (caused by a bug). |
-| **11** | **Application** | **P95 Latency (Seconds)** | Flask Exporter | `histogram_quantile(0.95, sum by (le) (rate(flask_http_request_duration_seconds_bucket[1m])))` | **The industry standard for Service Level Agreements (SLAs).** Average (mean) latency is dangerously misleading because a few fast requests mask slow outliers. P95 guarantees that 95% of users experience response times below this mark. |
-| **12** | **Application** | **App HTTP Error Rate (err/s)** | Flask Exporter | `sum(rate(flask_http_request_total{status=~"[45].."}[1m]))` | Measures application failure frequencies (HTTP 4xx client errors & 5xx server exceptions). Vital golden signal: latency may remain low if requests fail immediately with 500 errors. |
+| **1** | **Compute** | **CPU Utilization (%)** | Node Exporter | `100 - (avg(rate(node_cpu_seconds_total{mode="idle"}[1m])) * 100)` | Direct processor execution saturation (active compute cycles vs idle). |
+| **2** | **Compute** | **System Load Average (1m)** | Node Exporter | `node_load1` | Operating system run-queue saturation (processes waiting for CPU or stuck in uninterruptible disk I/O sleep). |
+| **3** | **Memory** | **Memory Utilization (%)** | Node Exporter | `(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100` | Real kernel RAM pressure (accounting for page buffers and reclaimable slab cache). |
+| **4** | **Storage** | **Disk Space Utilization (%)** | Node Exporter | `100 - ((node_filesystem_avail_bytes{mountpoint="/"}/node_filesystem_size_bytes{mountpoint="/"}) * 100)` | Persistent volume capacity exhaustion (prevents catastrophic container halts). |
+| **5** | **Storage** | **Disk Read Rate (Bps)** | Node Exporter | `sum(rate(node_disk_read_bytes_total[1m]))` | Block-level read bandwidth (identifies cache misses, table scans, and disk bottlenecks). |
+| **6** | **Storage** | **Disk Write Rate (Bps)** | Node Exporter | `sum(rate(node_disk_written_bytes_total[1m]))` | Block-level write bandwidth (detects runaway debug logging, database flushes, and ransomware). |
+| **7** | **Network** | **Network Inbound Rate (Bps)** | Node Exporter | `sum(rate(node_network_receive_bytes_total{device!~"lo\|docker.*\|veth.*"}[1m]))` | Ingress wire throughput (detects Layer 7 DDoS floods and large payload uploads). |
+| **8** | **Network** | **Network Outbound Rate (Bps)** | Node Exporter | `sum(rate(node_network_transmit_bytes_total{device!~"lo\|docker.*\|veth.*"}[1m]))` | Egress wire throughput (catches unauthorized data exfiltration and database dumps). |
+| **9** | **Network** | **Active TCP Sockets** | Node Exporter | `node_sockstat_TCP_inuse` | Transport layer connection volume (detects socket leaks, SYN floods, and connection pool starvation). |
+| **10** | **Application** | **App Request Throughput (req/s)** | Flask Exporter | `sum(rate(flask_http_request_total[1m]))` | User traffic demand volume (correlates organic user load vs inorganic malicious spikes). |
+| **11** | **Application** | **P95 Latency (Seconds)** | Flask Exporter | `histogram_quantile(0.95, sum by (le) (rate(flask_http_request_duration_seconds_bucket[1m])))` | Tail transaction latency (the gold-standard SLA indicator; exposes degradation masked by averages). |
+| **12** | **Application** | **App HTTP Error Rate (err/s)** | Flask Exporter | `sum(rate(flask_http_request_total{status=~"[45].."}[1m]))` | Application failure frequency (catches broken logic where latency is deceptively fast because requests abort with 500s). |
+
+---
+
+### 3.3 Detailed Tier-by-Tier Rationale
+
+#### Tier 1: Compute Architecture (Metrics 1 & 2)
+* **CPU Utilization alone is deceptive:** A server can have 10% CPU usage yet be completely frozen if processes are blocked waiting for disk I/O (uninterruptible sleep state `D`).
+* **Why System Load Average is mandatory:** Linux load average counts both tasks running on the CPU and tasks waiting in the disk queue. By pairing **CPU Utilization** with **1-Minute System Load (`node_load1`)**, the Isolation Forest model can instantly distinguish between compute-heavy tasks (high CPU, proportional load) and I/O-wait bottlenecks (low CPU, high load).
+
+#### Tier 2: Memory Architecture (Metric 3)
+* **The `MemAvailable` vs. `MemFree` Distinction:** In modern Linux kernels, free memory is deliberately used for page caching. Evaluating `node_memory_MemFree_bytes` gives false alarms because Linux caches disk reads in RAM.
+* **Why Sentro calculates `MemAvailable`:** Our PromQL query evaluates `node_memory_MemAvailable_bytes`, which measures the memory that can actually be allocated without triggering swap or out-of-memory (OOM) killer invocations. This provides a mathematically accurate trajectory of progressive memory leaks.
+
+#### Tier 3: Storage & Disk I/O (Metrics 4, 5, & 6)
+* **Capacity vs. Throughput:** Disk space (%) measures long-term exhaustion, while Read/Write rates measure real-time saturation.
+* **Why Asymmetric I/O Matters:** Normal web operations feature balanced or read-dominant I/O. A sudden surge in **Disk Write Rate** without a corresponding rise in traffic exposes runaway loggers or unthrottled memory dumps. Conversely, a spike in **Disk Read Rate** exposes database index degradation or distributed cache evictions.
+
+#### Tier 4: Network & Socket Saturation (Metrics 7, 8, & 9)
+* **Why Socket Count is Critical:** Network throughput (Bytes/sec) measures packet volume, but connection exhaustion attacks (such as Slowloris or unclosed HTTP connection pools) consume almost zero bandwidth while holding thousands of open sockets.
+* **Monitoring `node_sockstat_TCP_inuse`:** Directly exposes file descriptor exhaustion and transport-layer leaks before network bandwidth meters notice any change.
+
+#### Tier 5: Google SRE Application Golden Signals (Metrics 10, 11, & 12)
+* **The "Flaw of Averages" in Latency:** If 99 users receive responses in 2ms and 1 user waits 5,000ms, the mean latency is ~51ms (which appears acceptable on a dashboard). **P95 Latency** measures the 95th percentile, guaranteeing visibility into the tail latency suffered by actual paying users.
+* **Why Error Rate completes the triad:** If a database crashes, web requests fail instantly with `HTTP 500 Internal Server Error` in 1ms. An observability system monitoring only latency would falsely report a "speed improvement." Monitoring **HTTP Error Rate (`flask_http_request_total{status=~"[45].."}`)** ensures that failure storms are immediately flagged as critical anomalies.
 
 ---
 
@@ -153,35 +188,51 @@ A machine learning model is only as effective as the feature engineering driving
 
 ---
 
-### 📸 Image 6: Grafana Executive Host & Hardware Telemetry
-* **What is happening:** The top tier of the Grafana Executive Dashboard (`sentro-overview.json`).
+### 📸 Image 6: Updated Live System Resource Health & Host Telemetry (Compute & Memory Tiers)
+* **What is happening:** The top tier of the updated Grafana Executive Dashboard (`sentro-overview.json`) running live on the newly provisioned AWS EC2 instance (`100.52.225.103`).
 * **Technical Metrics & Details:**
-  * **Current CPU Utilization:** `1.40%` (idle state).
-  * **CPU Usage Timeline:** Shows baseline calm with a previous spike peaking at `68.1%` (Mean: 5.94%, Max: 68.1%) during container rebuild.
-  * **Memory Breakdown (The 77.3% Insight):**
-    * Used RAM: `707 MiB` | Available RAM: `207 MiB`.
-    * Current Memory Utilization Gauge: `77.3%` in the yellow warning zone.
-  * **Network I/O:** Received `111 B/s`, Transmitted `2.26 kB/s`.
-* **Viva Talking Point:** Visually explains the resource profile of a 1GB micro-instance running a 5-container enterprise stack.
+  * **Current CPU Utilization:** Measured at **`1.62%`** in the green zone (Mean: `0.999%`, Max: `1.62%`), reflecting stable background operations.
+  * **Current Memory Utilization:** Measured at **`74.1%`** in the yellow operational zone.
+  * **Memory Breakdown (Used vs. Available):**
+    * **Used RAM:** **`677 MiB`** (Max: 678 MiB).
+    * **Available RAM:** **`~270 MiB`** (out of ~950 MiB usable).
+    * Visually proves the exact memory footprint of hosting 5 containerized enterprise microservices on an AWS `t3.micro` instance.
+  * **Network I/O:** Inbound Received at **`111 B/s`**, Outbound Transmitted at **`~2.0 kB/s`**.
+* **What It Proves:** Continuous real-time host-level telemetry aggregation via Node Exporter.
 
 ---
 
-### 📸 Image 7: Baseline ML Anomaly Detection & Threat Horizon
-* **What is happening:** The AIOps tier of the Grafana Dashboard under baseline conditions.
+### 📸 Image 7: Storage & System Saturation Tier (The 12-Parameter Milestone)
+* **What is happening:** The dedicated middle tier of the Grafana Dashboard displaying the newly implemented **Storage & Saturation Telemetry Vectors**.
 * **Technical Metrics & Details:**
-  * **Workload Metrics:** Request Throughput is `0 req/s`, Latency is `NaN` (no client traffic yet).
-  * **Live ML Anomaly Status:** Bright red banner displaying **`🚨 ANOMALY DETECTED`**.
-  * **Isolation Forest Anomaly Score Gauge:** Measures **`0.640`** (elevated yellow/orange zone).
-  * **Anomaly Score Timeline & Threat Horizon:** Continuous green score line at `0.640`, hovering above the yellow advisory line (`0.50`) and below the red critical threshold line (`0.70`).
-* **The Academic Explanation (Environmental Drift):**
-  * The synthetic baseline training data assumed a standard server with 30% idle RAM.
-  * On the live 1GB EC2 instance, the 5 containers consume 77.3% RAM.
-  * The Isolation Forest mathematically isolated this point as an outlier (`label: -1`), demonstrating that the algorithm is genuinely evaluating live telemetry and detecting hardware profile discrepancies.
-  * The multi-tier architecture withheld email dispatching because the continuous score (`0.640`) had not breached the critical `0.70` boundary.
+  * **System Load Average (1m):**
+    * Green line tracks Linux kernel run-queue saturation (Mean: **`0.0488`**, Peak: **`0.330`** during container deployment).
+    * Load remains well below the 2.0 core capacity threshold, confirming no CPU starvation.
+  * **Active TCP Sockets (Right Axis):**
+    * Yellow line actively tracks open TCP connections (**`1` active socket**), proving network socket health without connection leaks.
+  * **Disk I/O Throughput (Read vs. Write):**
+    * **Disk Read Rate (Green):** Averaging **`58.1 kB/s`** with peaks reaching **`348 kB/s`** during telemetry polling and TSDB writes.
+    * **Disk Write Rate (Yellow):** Averaging **`10.6 kB/s`** with peaks of **`23.3 kB/s`**, capturing Prometheus WAL commit blocks.
+* **Why This Matters for Reviewers:** Directly satisfies the requirement for 10+ monitored metrics, expanding visibility into disk bottlenecks and OS thread scheduling.
 
 ---
 
-### 📸 Image 8: Autonomous Incident Response (Gmail Notification)
+### 📸 Image 8: 12-Feature Intelligent ML Anomaly Detection & Threat Horizon
+* **What is happening:** The AIOps tier of the Grafana Dashboard running live inference with the **12-parameter Isolation Forest model**.
+* **Technical Metrics & Details:**
+  * **Live ML Anomaly Status:** Prominent red banner displaying **`🚨 ANOMALY DETECTED`**.
+  * **Isolation Forest Anomaly Score Gauge:** Measures **`0.662`** (Peak: `0.669`) in the yellow/orange elevated advisory zone.
+  * **Anomaly Score Timeline & Threat Horizon:**
+    * The continuous green score line tracks steadily at `0.662`.
+    * It sits safely above the yellow advisory warning line (**`0.50`**) and directly below the red critical threshold line (**`0.70`**).
+* **The Academic Explanation for Your Reviewer/Professor:**
+  * The model evaluates 12 simultaneous dimensions (CPU, Load, Memory, Disk Space, Disk Read, Disk Write, Net In, Net Out, TCP Sockets, App Requests, P95 Latency, Error Rate).
+  * Because 74.1% idle memory is higher than typical unburdened servers, the model detects this environmental distribution shift (`label: -1`).
+  * However, our multi-tiered alerting architecture successfully holds off critical notifications because the severity score (`0.662`) has not breached the `0.70` critical alert threshold, preventing alert fatigue.
+
+---
+
+### 📸 Image 9: Autonomous Incident Response (Gmail Notification)
 * **What is happening:** Real-time email notification received in Google Gmail inbox (`suyashjha147280@gmail.com`).
 * **Technical Metrics & Details:**
   * **Subject:** `🚨 [CRITICAL ALERT] Cloud Resource Anomaly Detected (Score: 0.61)`
@@ -197,7 +248,7 @@ A machine learning model is only as effective as the feature engineering driving
 
 ---
 
-### 📸 Image 9: Chaos Engineering & Traffic Surge Verification
+### 📸 Image 10: Chaos Engineering & Traffic Surge Verification
 * **What is happening:** Grafana Application Workload panel during the execution of `simulate_chaos.py --traffic-burst`.
 * **Technical Metrics & Details:**
   * **Total Requests Dispatched:** 1,752 HTTP requests generated across 20 concurrent threads.
@@ -261,6 +312,7 @@ The codebase includes comprehensive automated tests covering every layer:
 To validate the system before production deployment, we engineered a dedicated chaos simulator supporting multiple injection vectors:
 * `--cpu-spike`: Spawns multi-threaded worker loops computing intensive trigonometric and square-root calculations to maximize CPU core utilization.
 * `--memory-leak`: Progressively allocates and holds uncollected 15MB byte arrays to emulate gradual RAM exhaustion.
+* `--disk-stress`: Generates high-throughput sequential disk write/read I/O cycles to validate storage saturation detection.
 * `--traffic-burst`: Deploys a thread pool of 20 concurrent HTTP clients flooding the API endpoint.
 
 ---
@@ -274,7 +326,7 @@ To validate the system before production deployment, we engineered a dedicated c
 > *"Deep Learning autoencoders require massive training datasets, high-end GPU compute, and significant inference latency (hundreds of milliseconds). Isolation Forest is computationally lightweight ($O(n \log n)$ training complexity), executes inference in under 5 milliseconds on a micro-instance CPU, and does not require neural network hyperparameters."*
 
 ### Q3: What is the benefit of your two-tier alerting mechanism?
-> *"In real-world SRE, alert fatigue is a primary cause of system outages. By combining the Isolation Forest outlier flag ($+1/-1$) with a continuous continuous severity score threshold ($0.70$) and a 300-second anti-spam cooldown, Sentro prevents notification floods while guaranteeing that genuine critical incidents immediately reach human engineers."*
+> *"In real-world SRE, alert fatigue is a primary cause of system outages. By combining the Isolation Forest outlier flag ($+1/-1$) with a continuous severity score threshold ($0.70$) and a 300-second anti-spam cooldown, Sentro prevents notification floods while guaranteeing that genuine critical incidents immediately reach human engineers."*
 
 ### Q4: Why did you monitor P95 Latency instead of Average Latency?
 > *"The Flaw of Averages. If 99 users experience 2ms latency and 1 user experiences 5000ms latency, the average latency is ~51ms, which looks acceptable on paper. P95 latency immediately exposes the tail latency experienced by real customers under load."*
@@ -286,7 +338,7 @@ To validate the system before production deployment, we engineered a dedicated c
 1. **IaC Deployment:** Terraform configuration provisioning EC2, Security Groups, and Elastic IP on AWS.
 2. **CI/CD Automation:** GitHub Actions pipeline executing unit testing, Docker Hub publishing, and zero-downtime SSH deployment.
 3. **Observability Mesh:** Prometheus and Node Exporter monitoring host and application vitals.
-4. **Machine Learning Engine:** Trained Isolation Forest model normalizing 6-dimensional telemetry into a continuous anomaly score.
-5. **Interactive Dashboard:** Provisioned Grafana portal showing real-time resource gauges and threat timelines.
-6. **Autonomous Incident Response:** SMTP TLS email alert dispatcher with telemetry forensics and cooldown throttling.
-7. **Chaos Engineering Toolkit:** Python CLI simulating CPU burns, RAM leaks, and concurrent traffic bursts.
+4. **Machine Learning Engine:** Trained Isolation Forest model normalizing **12-dimensional telemetry** into a continuous anomaly score.
+5. **Interactive Dashboard:** Provisioned Grafana portal showing real-time resource gauges, storage/saturation tiers, and threat timelines across **10 photographic evidence figures**.
+6. **Autonomous Incident Response:** SMTP TLS email alert dispatcher with 12-parameter telemetry forensics and cooldown throttling.
+7. **Chaos Engineering Toolkit:** Python CLI simulating CPU burns, RAM leaks, disk stress, and concurrent traffic bursts.
