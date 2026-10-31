@@ -12,6 +12,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../'
 from ml.model import AnomalyDetector
 from ml.collector import MetricCollector
 from ml.train import train_and_save_model
+from ml.email_notifier import EmailNotifier
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger("ml-detector")
@@ -49,6 +50,7 @@ class DetectionService:
 
         self.collector = MetricCollector(prometheus_url=self.prometheus_url)
         self.detector = AnomalyDetector()
+        self.notifier = EmailNotifier()
         self._ensure_model_loaded()
 
         self.latest_result: Dict[str, Any] = {
@@ -93,6 +95,9 @@ class DetectionService:
             )
         else:
             logger.info(f"[HEALTHY] Normal workload. Score: {score:.4f} (CPU: {metrics.get('cpu_usage')}%)")
+
+        # Dispatch automated email notification if threshold is reached (with cooldown)
+        self.notifier.notify_if_needed(prediction, metrics)
 
         self.latest_result = {
             "status": prediction["status"],

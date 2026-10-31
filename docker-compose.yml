@@ -93,6 +93,14 @@ services:
       - PROMETHEUS_URL=http://prometheus:9090
       - MODEL_DIR=ml/models
       - POLL_INTERVAL=10
+      - ALERT_EMAIL_ENABLED=${ALERT_EMAIL_ENABLED:-false}
+      - SMTP_SERVER=${SMTP_SERVER:-smtp.gmail.com}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - ALERT_EMAIL_SENDER=${ALERT_EMAIL_SENDER:-}
+      - ALERT_EMAIL_PASSWORD=${ALERT_EMAIL_PASSWORD:-}
+      - ALERT_EMAIL_RECIPIENT=${ALERT_EMAIL_RECIPIENT:-}
+      - ALERT_SCORE_THRESHOLD=${ALERT_SCORE_THRESHOLD:-0.70}
+      - ALERT_COOLDOWN_SECONDS=${ALERT_COOLDOWN_SECONDS:-300}
     networks:
       - sentro-network
     depends_on:

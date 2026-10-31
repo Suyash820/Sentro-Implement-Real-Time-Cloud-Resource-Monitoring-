@@ -43,7 +43,15 @@ In **Module 3**, we upgraded the Sentro Observability platform into an intellige
 
 ---
 
-## 4. Interactive Chaos & Stress Simulator (`scripts/simulate_chaos.py`)
+## 4. Automated Email Alerting & Notification Dispatcher (`ml/email_notifier.py`)
+* **Real-Time SMTP Dispatcher**: Directly integrated into the detection loop. Automatically fires when the anomaly score breaches the configured threshold (`ALERT_SCORE_THRESHOLD=0.70`).
+* **Cooldown & Anti-Spam Throttling**: Enforces a configurable cooldown window (`ALERT_COOLDOWN_SECONDS=300`) to prevent flooding an engineer's inbox during prolonged load spikes.
+* **Auto-Recovery Notifications**: Detects when system metrics stabilize back below `0.50` and automatically delivers an "Issue Resolved — Workload Normalized" notification.
+* **Environment-Driven Configuration**: Fully configurable via `.env` or container environment variables (`ALERT_EMAIL_ENABLED`, `SMTP_SERVER`, `SMTP_PORT`, `ALERT_EMAIL_SENDER`, `ALERT_EMAIL_PASSWORD`, `ALERT_EMAIL_RECIPIENT`). Documented in `.env.example`.
+
+---
+
+## 5. Interactive Chaos & Stress Simulator (`scripts/simulate_chaos.py`)
 * Command-line tool to trigger artificial cloud disruptions and test ML detection accuracy:
   * `python scripts/simulate_chaos.py --cpu-spike --duration 30`: Spikes multi-threaded CPU load to 100%.
   * `python scripts/simulate_chaos.py --memory-leak --duration 30`: Progressively leaks ~300MB of RAM.
